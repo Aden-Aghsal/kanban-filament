@@ -23,6 +23,12 @@ protected static ?string $navigationGroup = 'Task Management';
     {
         return $form
         ->schema([
+            Forms\Components\Select::make('user_id')
+    ->relationship('user', 'name')
+    ->searchable()
+    ->visible(fn () => auth()->user()->isAdmin())
+    ->required(),
+
             Forms\Components\TextInput::make('title')
                 ->required()
                 ->maxLength(255),

@@ -38,4 +38,10 @@ class TaskPolicy
     {
         return $user->isAdmin() || $task->user_id === $user->id;
     }
+
+    public function create(User $user): bool
+{
+    return true; // semua boleh create
+}
+
 }
