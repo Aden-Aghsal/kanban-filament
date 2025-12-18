@@ -43,4 +43,12 @@
             </span>
         @endif
     </div>
+
+    @if($record->status === 'canceled' && $record->canceled_reason)
+    <p class="mt-2 text-xs text-red-500 italic">
+        “{{ $record->canceled_reason }}”
+    </p>
+@endif
 </div>
+
+

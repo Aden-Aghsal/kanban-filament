@@ -3,6 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Models\Task;
+use Filament\Forms;
+use Filament\Notifications\Notification;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
 use Illuminate\Support\Collection; // PENTING: Gunakan Collection, bukan Builder
 
@@ -58,4 +60,71 @@ class TaskKanban extends KanbanBoard
 
         return $query->get(); // Mengembalikan Collection (Hasil Data)
     }
+
+    protected function onStatusChanged($record, string $status): void
+{
+    // Kalau bukan cancel → update normal
+    if ($status !== 'canceled') {
+        $record->update([
+            'status' => $status,
+            'canceled_at' => null,
+            'canceled_reason' => null,
+        ]);
+
+        return;
+    }
+
+    // Kalau cancel → buka modal
+    $this->mountAction('cancelTask', [
+        'task_id' => $record->id,
+    ]);
+}
+
+protected function getActions(): array
+{
+    return [
+        Forms\Components\Actions\Action::make('cancelTask')
+            ->label('Cancel Task')
+            ->modalHeading('Cancel Task')
+            ->modalDescription('Masukkan alasan pembatalan task')
+            ->form([
+                Forms\Components\Textarea::make('canceled_reason')
+                    ->label('Alasan Cancel')
+                    ->required()
+                    ->rows(3),
+            ])
+            ->action(function (array $data, array $arguments) {
+    $task = Task::findOrFail($arguments['task_id']);
+
+    if (! $this->canCancel($task)) {
+        Notification::make()
+            ->title('Tidak diizinkan')
+            ->danger()
+            ->send();
+
+        return;
+    }
+
+    $task->update([
+        'status' => 'canceled',
+        'canceled_at' => now(),
+        'canceled_reason' => $data['canceled_reason'],
+    ]);
+
+                Notification::make()
+                    ->title('Task berhasil dicancel')
+                    ->success()
+                    ->send();
+            }),
+    ];
+}
+
+protected function canCancel(Task $task): bool
+{
+    $user = auth()->user();
+
+    return $user->isAdmin() || $task->user_id === $user->id;
+}
+
+
 }
