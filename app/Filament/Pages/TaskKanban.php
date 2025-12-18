@@ -9,10 +9,12 @@ use Filament\Notifications\Notification;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
 use Illuminate\Support\Collection;
 use Illuminate\Auth\Access\AuthorizationException;
+use App\Enums\TaskStatus;
 
 class TaskKanban extends KanbanBoard
 {
     protected static string $model = Task::class;
+    protected static string $statusEnum = TaskStatus::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-view-columns';
     protected static ?string $navigationLabel = 'Kanban Board';
@@ -35,16 +37,6 @@ class TaskKanban extends KanbanBoard
     protected function getCardView(): string
     {
         return 'filament.kanban.task-card'; // buat di resources/views/filament/kanban/task-card.blade.php
-    }
-
-    protected function getStatuses(): array
-    {
-        return [
-            'todo' => 'Todo',
-            'in_progress' => 'In Progress',
-            'done' => 'Done',
-            'canceled' => 'Canceled',
-        ];
     }
 
     /* =======================
