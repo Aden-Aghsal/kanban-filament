@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Task;
 use Filament\Forms;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
 use Illuminate\Support\Collection;
@@ -18,8 +19,8 @@ class TaskKanban extends KanbanBoard
     protected static ?string $navigationGroup = 'Task Management';
 
     /* =======================
-     |  UI / UX
-     ======================= */
+       UI / UX
+    ======================= */
     protected function getColumnHeader(string $status): string
     {
         return match ($status) {
@@ -33,7 +34,7 @@ class TaskKanban extends KanbanBoard
 
     protected function getCardView(): string
     {
-        return 'filament.kanban.task-card';
+        return 'filament.kanban.task-card'; // buat di resources/views/filament/kanban/task-card.blade.php
     }
 
     protected function getStatuses(): array
@@ -47,8 +48,8 @@ class TaskKanban extends KanbanBoard
     }
 
     /* =======================
-     |  DATA (ANTI INSPECT)
-     ======================= */
+       DATA (ANTI INSPECT)
+    ======================= */
     protected function records(): Collection
     {
         $query = Task::query();
@@ -61,22 +62,27 @@ class TaskKanban extends KanbanBoard
     }
 
     /* =======================
-     |  DRAG & DROP (SECURE)
-     ======================= */
-    public function onStatusChanged(
-        string|int $recordId,
-        string $status,
-        array $fromOrderedIds,
-        array $toOrderedIds
-    ): void {
+       DRAG & DROP (SECURE)
+    ======================= */
+    public function onStatusChanged(string|int $recordId, string $status, array $fromOrderedIds, array $toOrderedIds): void
+    {
         $task = Task::findOrFail($recordId);
 
-        // 🔐 SERVER SIDE PERMISSION
+        // server-side permission check
         if (! auth()->user()->can('update', $task)) {
-            throw new AuthorizationException('Unauthorized');
+            throw new AuthorizationException('Unauthorized action.');
         }
 
-        // ❌ CANCEL → MODAL
+        // lock done untuk user biasa
+        if (! auth()->user()->isAdmin() && $status === 'done') {
+            Notification::make()
+                ->title('Tidak diizinkan')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // logic cancel
         if ($status === 'canceled') {
             $this->mountAction('cancelTask', [
                 'task_id' => $task->id,
@@ -84,7 +90,7 @@ class TaskKanban extends KanbanBoard
             return;
         }
 
-        // ✅ STATUS NORMAL
+        // update status normal
         $task->update([
             'status' => $status,
             'canceled_at' => null,
@@ -93,12 +99,12 @@ class TaskKanban extends KanbanBoard
     }
 
     /* =======================
-     |  ACTION: CANCEL TASK
-     ======================= */
+       ACTION: CANCEL TASK
+    ======================= */
     protected function getActions(): array
     {
         return [
-            Forms\Components\Actions\Action::make('cancelTask')
+            Action::make('cancelTask')
                 ->label('Cancel Task')
                 ->modalHeading('Cancel Task')
                 ->modalDescription('Masukkan alasan pembatalan task')
@@ -108,7 +114,7 @@ class TaskKanban extends KanbanBoard
                         ->required()
                         ->rows(3),
                 ])
-                ->action(function (array $data, array $arguments) {
+                ->action(function(array $data, array $arguments) {
                     $task = Task::findOrFail($arguments['task_id']);
 
                     if (! auth()->user()->can('cancel', $task)) {
@@ -127,5 +133,14 @@ class TaskKanban extends KanbanBoard
                         ->send();
                 }),
         ];
+    }
+
+    /* =======================
+       HELPERS
+    ======================= */
+    protected function canCancel(Task $task): bool
+    {
+        $user = auth()->user();
+        return $user->isAdmin() || $task->user_id === $user->id;
     }
 }
