@@ -6,7 +6,8 @@ use App\Models\Task;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
-use Illuminate\Support\Collection; // PENTING: Gunakan Collection, bukan Builder
+use Illuminate\Support\Collection;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class TaskKanban extends KanbanBoard
 {
@@ -16,7 +17,9 @@ class TaskKanban extends KanbanBoard
     protected static ?string $navigationLabel = 'Kanban Board';
     protected static ?string $navigationGroup = 'Task Management';
 
-    // Header Kolom dengan Emoji (Sudah Bagus!)
+    /* =======================
+     |  UI / UX
+     ======================= */
     protected function getColumnHeader(string $status): string
     {
         return match ($status) {
@@ -28,10 +31,8 @@ class TaskKanban extends KanbanBoard
         };
     }
 
-    // View Kustom untuk Kartu
     protected function getCardView(): string
     {
-        // Pastikan file ini ada di: resources/views/filament/kanban/task-card.blade.php
         return 'filament.kanban.task-card';
     }
 
@@ -45,86 +46,86 @@ class TaskKanban extends KanbanBoard
         ];
     }
 
-    /**
-     * PERBAIKAN: Mengubah return type menjadi Collection 
-     * dan menambahkan ->get() untuk menjalankan query.
-     */
+    /* =======================
+     |  DATA (ANTI INSPECT)
+     ======================= */
     protected function records(): Collection
     {
         $query = Task::query();
 
-        // Jika bukan admin, hanya ambil task miliknya
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
             $query->where('user_id', auth()->id());
         }
 
-        return $query->get(); // Mengembalikan Collection (Hasil Data)
+        return $query->get();
     }
 
-    protected function onStatusChanged($record, string $status): void
-{
-    // Kalau bukan cancel → update normal
-    if ($status !== 'canceled') {
-        $record->update([
+    /* =======================
+     |  DRAG & DROP (SECURE)
+     ======================= */
+    public function onStatusChanged(
+        string|int $recordId,
+        string $status,
+        array $fromOrderedIds,
+        array $toOrderedIds
+    ): void {
+        $task = Task::findOrFail($recordId);
+
+        // 🔐 SERVER SIDE PERMISSION
+        if (! auth()->user()->can('update', $task)) {
+            throw new AuthorizationException('Unauthorized');
+        }
+
+        // ❌ CANCEL → MODAL
+        if ($status === 'canceled') {
+            $this->mountAction('cancelTask', [
+                'task_id' => $task->id,
+            ]);
+            return;
+        }
+
+        // ✅ STATUS NORMAL
+        $task->update([
             'status' => $status,
             'canceled_at' => null,
             'canceled_reason' => null,
         ]);
-
-        return;
     }
 
-    // Kalau cancel → buka modal
-    $this->mountAction('cancelTask', [
-        'task_id' => $record->id,
-    ]);
-}
+    /* =======================
+     |  ACTION: CANCEL TASK
+     ======================= */
+    protected function getActions(): array
+    {
+        return [
+            Forms\Components\Actions\Action::make('cancelTask')
+                ->label('Cancel Task')
+                ->modalHeading('Cancel Task')
+                ->modalDescription('Masukkan alasan pembatalan task')
+                ->form([
+                    Forms\Components\Textarea::make('canceled_reason')
+                        ->label('Alasan Cancel')
+                        ->required()
+                        ->rows(3),
+                ])
+                ->action(function (array $data, array $arguments) {
+                    $task = Task::findOrFail($arguments['task_id']);
 
-protected function getActions(): array
-{
-    return [
-        Forms\Components\Actions\Action::make('cancelTask')
-            ->label('Cancel Task')
-            ->modalHeading('Cancel Task')
-            ->modalDescription('Masukkan alasan pembatalan task')
-            ->form([
-                Forms\Components\Textarea::make('canceled_reason')
-                    ->label('Alasan Cancel')
-                    ->required()
-                    ->rows(3),
-            ])
-            ->action(function (array $data, array $arguments) {
-    $task = Task::findOrFail($arguments['task_id']);
+                    if (! auth()->user()->can('cancel', $task)) {
+                        abort(403);
+                    }
 
-    if (! $this->canCancel($task)) {
-        Notification::make()
-            ->title('Tidak diizinkan')
-            ->danger()
-            ->send();
+                    $task->update([
+                        'status' => 'canceled',
+                        'canceled_at' => now(),
+                        'canceled_reason' => $data['canceled_reason'],
+                    ]);
 
-        return;
+                    Notification::make()
+                        ->title('Task berhasil dicancel')
+                        ->success()
+                        ->send();
+                }),
+        ];
     }
-
-    $task->update([
-        'status' => 'canceled',
-        'canceled_at' => now(),
-        'canceled_reason' => $data['canceled_reason'],
-    ]);
-
-                Notification::make()
-                    ->title('Task berhasil dicancel')
-                    ->success()
-                    ->send();
-            }),
-    ];
-}
-
-protected function canCancel(Task $task): bool
-{
-    $user = auth()->user();
-
-    return $user->isAdmin() || $task->user_id === $user->id;
-}
-
-
 }

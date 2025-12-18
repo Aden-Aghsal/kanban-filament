@@ -113,4 +113,15 @@ protected static ?string $navigationGroup = 'Task Management';
 
     return $query;
 }
+
+public static function canEdit($record): bool
+{
+    return auth()->user()->can('update', $record);
+}
+
+public static function canDelete($record): bool
+{
+    return auth()->user()->can('delete', $record);
+}
+
 }
