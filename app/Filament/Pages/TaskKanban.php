@@ -4,7 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Task;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection; // PENTING: Gunakan Collection, bukan Builder
 
 class TaskKanban extends KanbanBoard
 {
@@ -14,9 +14,25 @@ class TaskKanban extends KanbanBoard
     protected static ?string $navigationLabel = 'Kanban Board';
     protected static ?string $navigationGroup = 'Task Management';
 
-    /**
-     * Definisi kolom kanban
-     */
+    // Header Kolom dengan Emoji (Sudah Bagus!)
+    protected function getColumnHeader(string $status): string
+    {
+        return match ($status) {
+            'todo' => '📝 Todo',
+            'in_progress' => '⚙️ In Progress',
+            'done' => '✅ Done',
+            'canceled' => '❌ Canceled',
+            default => ucfirst($status),
+        };
+    }
+
+    // View Kustom untuk Kartu
+    protected function getCardView(): string
+    {
+        // Pastikan file ini ada di: resources/views/filament/kanban/task-card.blade.php
+        return 'filament.kanban.task-card';
+    }
+
     protected function getStatuses(): array
     {
         return [
@@ -28,14 +44,18 @@ class TaskKanban extends KanbanBoard
     }
 
     /**
-     * Query data task
-     * Admin: semua task
-     * User: task miliknya
+     * PERBAIKAN: Mengubah return type menjadi Collection 
+     * dan menambahkan ->get() untuk menjalankan query.
      */
-    protected function records(): Builder
+    protected function records(): Collection
     {
-        return auth()->user()->isAdmin()
-            ? Task::query()
-            : Task::where('user_id', auth()->id());
+        $query = Task::query();
+
+        // Jika bukan admin, hanya ambil task miliknya
+        if (!auth()->user()->isAdmin()) {
+            $query->where('user_id', auth()->id());
+        }
+
+        return $query->get(); // Mengembalikan Collection (Hasil Data)
     }
 }
