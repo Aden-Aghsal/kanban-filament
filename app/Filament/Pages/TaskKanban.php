@@ -3,13 +3,13 @@
 namespace App\Filament\Pages;
 
 use App\Models\Task;
+use App\Enums\TaskStatus;
 use Filament\Forms;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
 use Illuminate\Support\Collection;
 use Illuminate\Auth\Access\AuthorizationException;
-use App\Enums\TaskStatus;
 
 class TaskKanban extends KanbanBoard
 {
@@ -26,21 +26,21 @@ class TaskKanban extends KanbanBoard
     protected function getColumnHeader(string $status): string
     {
         return match ($status) {
-            'todo' => '📝 Todo',
-            'in_progress' => '⚙️ In Progress',
-            'done' => '✅ Done',
-            'canceled' => '❌ Canceled',
+            TaskStatus::TODO->value => '📝 Todo',
+            TaskStatus::IN_PROGRESS->value => '⚙️ In Progress',
+            TaskStatus::DONE->value => '✅ Done',
+            TaskStatus::CANCELED->value => '❌ Canceled',
             default => ucfirst($status),
         };
     }
 
     protected function getCardView(): string
     {
-        return 'filament.kanban.task-card'; // buat di resources/views/filament/kanban/task-card.blade.php
+        return 'filament.kanban.task-card';
     }
 
     /* =======================
-       DATA (ANTI INSPECT)
+       DATA
     ======================= */
     protected function records(): Collection
     {
@@ -54,19 +54,24 @@ class TaskKanban extends KanbanBoard
     }
 
     /* =======================
-       DRAG & DROP (SECURE)
+       DRAG & DROP (ENUM SAFE)
     ======================= */
-    public function onStatusChanged(string|int $recordId, string $status, array $fromOrderedIds, array $toOrderedIds): void
-    {
+    public function onStatusChanged(
+        string|int $recordId,
+        string $status,
+        array $fromOrderedIds,
+        array $toOrderedIds
+    ): void {
         $task = Task::findOrFail($recordId);
 
-        // server-side permission check
         if (! auth()->user()->can('update', $task)) {
             throw new AuthorizationException('Unauthorized action.');
         }
 
-        // lock done untuk user biasa
-        if (! auth()->user()->isAdmin() && $status === 'done') {
+        $newStatus = TaskStatus::from($status);
+
+        // lock DONE untuk user biasa
+        if (! auth()->user()->isAdmin() && $newStatus === TaskStatus::DONE) {
             Notification::make()
                 ->title('Tidak diizinkan')
                 ->danger()
@@ -74,17 +79,17 @@ class TaskKanban extends KanbanBoard
             return;
         }
 
-        // logic cancel
-        if ($status === 'canceled') {
+        // cancel pakai modal
+        if ($newStatus === TaskStatus::CANCELED) {
             $this->mountAction('cancelTask', [
                 'task_id' => $task->id,
             ]);
             return;
         }
 
-        // update status normal
+        // update normal
         $task->update([
-            'status' => $status,
+            'status' => $newStatus,
             'canceled_at' => null,
             'canceled_reason' => null,
         ]);
@@ -106,7 +111,7 @@ class TaskKanban extends KanbanBoard
                         ->required()
                         ->rows(3),
                 ])
-                ->action(function(array $data, array $arguments) {
+                ->action(function (array $data, array $arguments) {
                     $task = Task::findOrFail($arguments['task_id']);
 
                     if (! auth()->user()->can('cancel', $task)) {
@@ -114,7 +119,7 @@ class TaskKanban extends KanbanBoard
                     }
 
                     $task->update([
-                        'status' => 'canceled',
+                        'status' => TaskStatus::CANCELED,
                         'canceled_at' => now(),
                         'canceled_reason' => $data['canceled_reason'],
                     ]);
@@ -125,14 +130,5 @@ class TaskKanban extends KanbanBoard
                         ->send();
                 }),
         ];
-    }
-
-    /* =======================
-       HELPERS
-    ======================= */
-    protected function canCancel(Task $task): bool
-    {
-        $user = auth()->user();
-        return $user->isAdmin() || $task->user_id === $user->id;
     }
 }

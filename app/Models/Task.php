@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -18,6 +19,12 @@ class Task extends Model
         'deadline',
         'canceled_at',
         'canceled_reason',
+    ];
+
+    protected $casts = [
+        'status' => TaskStatus::class,
+        'deadline' => 'datetime',
+        'canceled_at' => 'datetime',
     ];
 
     public function user()
