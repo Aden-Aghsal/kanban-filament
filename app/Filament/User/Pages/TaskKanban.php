@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Filament\User\Pages;
 
 use App\Models\Task;
 use App\Enums\TaskStatus;
+use App\Enums\TaskPriority;
 use Filament\Forms;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -16,9 +17,10 @@ class TaskKanban extends KanbanBoard
     protected static string $model = Task::class;
     protected static string $statusEnum = TaskStatus::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-view-columns';
-    protected static ?string $navigationLabel = 'Kanban Board';
-    protected static ?string $navigationGroup = 'Task Management';
+   protected static ?string $navigationGroup = 'Task Management';
+protected static ?string $navigationLabel = 'Kanban Board';
+protected static ?string $navigationIcon = 'heroicon-o-view-columns';
+
 
     /* =======================
        UI / UX
@@ -36,7 +38,7 @@ class TaskKanban extends KanbanBoard
 
     protected function getCardView(): string
     {
-        return 'filament.kanban.task-card';
+        return 'filament.kanban.user-task-card';
     }
 
     /* =======================
@@ -44,17 +46,13 @@ class TaskKanban extends KanbanBoard
     ======================= */
     protected function records(): Collection
     {
-        $query = Task::query();
-
-        if (! auth()->user()->isAdmin()) {
-            $query->where('user_id', auth()->id());
-        }
-
-        return $query->get();
+        return Task::where('user_id', auth()->id())
+            ->orderByRaw("FIELD(priority, 'high','medium','low')")
+            ->get();
     }
 
     /* =======================
-       DRAG & DROP (ENUM SAFE)
+       DRAG & DROP
     ======================= */
     public function onStatusChanged(
         string|int $recordId,
@@ -70,8 +68,8 @@ class TaskKanban extends KanbanBoard
 
         $newStatus = TaskStatus::from($status);
 
-        // lock DONE untuk user biasa
-        if (! auth()->user()->isAdmin() && $newStatus === TaskStatus::DONE) {
+        // user biasa tidak bisa langsung pindah ke DONE
+        if ($newStatus === TaskStatus::DONE) {
             Notification::make()
                 ->title('Tidak diizinkan')
                 ->danger()
@@ -87,7 +85,6 @@ class TaskKanban extends KanbanBoard
             return;
         }
 
-        // update normal
         $task->update([
             'status' => $newStatus,
             'canceled_at' => null,

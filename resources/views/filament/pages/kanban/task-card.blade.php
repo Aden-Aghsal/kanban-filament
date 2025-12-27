@@ -14,7 +14,7 @@
 
     {{-- Description --}}
     @if($record->description)
-    <p class="text-sm text-gray-700 mb-2">{{ $record->description }}</p>
+        <p class="text-sm text-gray-700 mb-2">{{ $record->description }}</p>
     @endif
 
     {{-- Status Badge --}}
@@ -37,12 +37,12 @@
     <div class="flex justify-between items-center mt-3 text-xs text-gray-500">
         <span>Owner: {{ $record->user->name ?? 'N/A' }}</span>
         @if($record->deadline)
-        <span>Deadline: {{ \Carbon\Carbon::parse($record->deadline)->format('d M Y') }}</span>
+            <span>Deadline: {{ \Carbon\Carbon::parse($record->deadline)->format('d M Y') }}</span>
         @endif
     </div>
 
     {{-- Action: Cancel Task --}}
-    @if(auth()->user()->can('cancel', $record))
+   {{-- @if(auth()->user()->can('cancel', $record))
         <div class="mt-2 text-right">
             <button
                 type="button"
@@ -52,5 +52,5 @@
                 Cancel
             </button>
         </div>
-    @endif
+    @endif--}}
 </div>

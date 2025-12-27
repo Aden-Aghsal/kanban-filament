@@ -5,11 +5,9 @@ namespace App\Providers\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -17,44 +15,54 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Http\Middleware\EnsureUserIsAdmin;
 
 use DutchCodingCompany\FilamentSocialite\FilamentSocialitePlugin;
 use DutchCodingCompany\FilamentSocialite\Provider;
+use Illuminate\Support\Facades\Blade;
 
-class AdminPanelProvider extends PanelProvider
+class UserPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
         return $panel
+            ->id('user')
+            ->path('app')
 
-            ->id('admin')
-            ->path('admin')
+            
+            ->plugins([
+                FilamentSocialitePlugin::make()
+                    ->providers([
+                        Provider::make('google')
+                            ->label('Google')
+                            ->icon('heroicon-o-arrow-right-on-rectangle')
+                            ->color('danger'),
+                    ])
+                    ->registration(true)
+            ])
+
+            ->renderHook(
+            'panels::auth.register.form.after',
+            fn () => Blade::render('<x-filament-socialite::buttons />'),
+        )
+
+          
             ->login()
-->plugins([
-            FilamentSocialitePlugin::make()
-                ->providers([
-                    Provider::make('google')
-                        ->label('Google')
-                        ->icon('heroicon-o-briefcase') // Bisa ganti icon lain
-                        ->color('danger'),
-                ])
-                ->registration(true), // Set true jika ingin user baru otomatis terdaftar
-        ])
+            ->registration()
+            ->profile()
+
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Blue,
             ])
 
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([
-                Pages\Dashboard::class,
-            ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
-            ])
+            ->discoverResources(
+                in: app_path('Filament/User/Resources'),
+                for: 'App\\Filament\\User\\Resources'
+            )
+
+            ->discoverPages(
+                in: app_path('Filament/User/Pages'),
+                for: 'App\\Filament\\User\\Pages'
+            )
 
             ->middleware([
                 EncryptCookies::class,
@@ -70,12 +78,6 @@ class AdminPanelProvider extends PanelProvider
 
             ->authMiddleware([
                 Authenticate::class,
-                EnsureUserIsAdmin::class, //  PEMBATAS ADMIN
-            ])
-
-            ->authGuard('web')
-            ->userMenuItems([]);
-
-            
+            ]);
     }
 }
