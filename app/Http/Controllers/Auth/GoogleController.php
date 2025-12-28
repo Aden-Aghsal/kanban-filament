@@ -29,14 +29,14 @@ class GoogleController extends Controller
         ]
     );
 
-    // 🔐 Default role untuk user baru
+    // Default role untuk user baru
     if (! $user->hasAnyRole(['admin', 'user'])) {
         $user->assignRole('user');
     }
 
     Auth::login($user);
 
-    // 🔁 Redirect sesuai role
+    //  Redirect sesuai role
     if ($user->hasRole('admin')) {
         return redirect('/admin');
     }

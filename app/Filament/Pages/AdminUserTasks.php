@@ -20,7 +20,7 @@ class AdminUserTasks extends Page implements HasTable
     protected static ?string $title = 'User Task Overview';
 
     /**
-     * 🔐 Hanya admin boleh akses halaman ini
+     *  Hanya admin boleh akses halaman ini
      */
     public function mount(): void
     {

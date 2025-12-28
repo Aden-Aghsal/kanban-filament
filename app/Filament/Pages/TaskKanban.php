@@ -23,10 +23,10 @@ class TaskKanban extends KanbanBoard
     protected function getColumnHeader(string $status): string
     {
         return match ($status) {
-            TaskStatus::TODO->value => '📝 Todo',
-            TaskStatus::IN_PROGRESS->value => '⚙️ In Progress',
-            TaskStatus::DONE->value => '✅ Done',
-            TaskStatus::CANCELED->value => '❌ Canceled',
+            TaskStatus::TODO->value => 'Todo',
+            TaskStatus::IN_PROGRESS->value => 'In Progress',
+            TaskStatus::DONE->value => 'Done',
+            TaskStatus::CANCELED->value => 'Canceled',
             default => ucfirst($status),
         };
     }

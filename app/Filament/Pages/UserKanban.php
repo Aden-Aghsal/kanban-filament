@@ -23,12 +23,12 @@ class UserKanban extends KanbanBoard
     {
         parent::mount();
 
-        // 🔐 Hanya admin
+        //  Hanya admin
         if (! auth()->user() || ! auth()->user()->hasRole('admin')) {
             throw new AuthorizationException();
         }
 
-        // 🔎 Ambil user dari query string
+        //  Ambil user dari query string
         $userId = request()->query('user');
         abort_if(! $userId, 404);
 
