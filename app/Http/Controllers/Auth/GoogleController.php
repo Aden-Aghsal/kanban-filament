@@ -26,19 +26,22 @@ class GoogleController extends Controller
         [
             'name' => $googleUser->getName(),
             'google_id' => $googleUser->getId(),
-            'password' => bcrypt(Str::random(32)),
         ]
     );
 
-    $user->refresh();
-    Auth::logout();
+    // 🔐 Default role untuk user baru
+    if (! $user->hasAnyRole(['admin', 'user'])) {
+        $user->assignRole('user');
+    }
+
     Auth::login($user);
 
-    if ($user->is_admin) {
-    return redirect()->to('/admin'); 
-}
+    // 🔁 Redirect sesuai role
+    if ($user->hasRole('admin')) {
+        return redirect('/admin');
+    }
 
-return redirect()->to('/app');
+    return redirect('/app');
 }
 
 }

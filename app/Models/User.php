@@ -7,14 +7,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Filament\Models\Contracts\HasAvatar;
-// --- Tambahkan Import Ini ---
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Spatie\Permission\Traits\HasRoles;
 
-// --- Implementasikan FilamentUser ---
 class User extends Authenticatable implements HasAvatar, FilamentUser
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $fillable = [
         'name',
@@ -22,7 +21,6 @@ class User extends Authenticatable implements HasAvatar, FilamentUser
         'password',
         'avatar',
         'google_id',
-        'role',
     ];
 
     protected $hidden = [
@@ -39,14 +37,12 @@ class User extends Authenticatable implements HasAvatar, FilamentUser
      ========================= */
     public function canAccessPanel(Panel $panel): bool
     {
-        // Jika mencoba akses panel Admin
         if ($panel->getId() === 'admin') {
-            return $this->role === 'admin';
+            return $this->hasRole('admin');
         }
 
-        // Jika mencoba akses panel User (id-nya adalah 'user')
         if ($panel->getId() === 'user') {
-            return true; // Semua user yang login (termasuk admin) boleh masuk panel User
+            return $this->hasRole('user') || $this->hasRole('admin');
         }
 
         return false;
@@ -66,7 +62,7 @@ class User extends Authenticatable implements HasAvatar, FilamentUser
      ========================= */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->hasRole('admin');
     }
 
     /* =========================
