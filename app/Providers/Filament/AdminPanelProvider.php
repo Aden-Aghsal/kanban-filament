@@ -70,7 +70,7 @@ class AdminPanelProvider extends PanelProvider
 
             ->authMiddleware([
                 Authenticate::class,
-                EnsureUserIsAdmin::class, //  PEMBATAS ADMIN
+               EnsureUserIsAdmin::class, //  PEMBATAS ADMIN
             ])
 
             ->authGuard('web')

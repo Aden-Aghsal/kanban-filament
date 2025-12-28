@@ -9,10 +9,9 @@ use Filament\Tables;
 use Filament\Resources\Resource;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 
-    class UserResource extends Resource
+class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
@@ -20,82 +19,76 @@ use Illuminate\Support\Facades\Hash;
     protected static ?string $navigationLabel = 'Users';
     protected static ?string $navigationGroup = 'User Management';
 
+    public static function form(Form $form): Form
+    {
+        return $form->schema([
+            Forms\Components\TextInput::make('name')
+                ->required(),
 
-   public static function form(Form $form): Form
-{
-    return $form->schema([
-        Forms\Components\TextInput::make('name')
-            ->required(),
+            Forms\Components\TextInput::make('email')
+                ->email()
+                ->required(),
 
-        Forms\Components\TextInput::make('email')
-            ->email()
-            ->required(),
+            // ✅ Gunakan relasi Spatie untuk role
+            Forms\Components\Select::make('role')
+                ->label('Role')
+                ->relationship('roles', 'name') // relasi ke tabel roles
+                ->preload() // load semua role
+                ->required(),
 
-        Forms\Components\Select::make('role')
-            ->options([
-                'admin' => 'Admin',
-                'user' => 'User',
-            ])
-            ->required(),
+            Forms\Components\TextInput::make('password')
+                ->password()
+                ->label('Password')
+                ->dehydrateStateUsing(fn ($state) =>
+                    filled($state) ? Hash::make($state) : null
+                )
+                ->dehydrated(fn ($state) => filled($state))
+                ->required(fn ($context) => $context === 'create'),
 
-        Forms\Components\TextInput::make('password')
-            ->password()
-            ->label('Password')
-            ->dehydrateStateUsing(fn ($state) =>
-                filled($state) ? Hash::make($state) : null
-            )
-            ->dehydrated(fn ($state) => filled($state))
-            ->required(fn ($context) => $context === 'create'),
-
-        Forms\Components\TextInput::make('password_confirmation')
-            ->password()
-            ->same('password')
-            ->dehydrated(false),
-    ]);
-}
-
+            Forms\Components\TextInput::make('password_confirmation')
+                ->password()
+                ->same('password')
+                ->dehydrated(false),
+        ]);
+    }
 
     public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
-            Tables\Columns\TextColumn::make('name')
-                ->searchable(),
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('name')
+                    ->searchable(),
 
-            Tables\Columns\TextColumn::make('email')
-                ->searchable(),
+                Tables\Columns\TextColumn::make('email')
+                    ->searchable(),
 
-            Tables\Columns\BadgeColumn::make('role')
-                ->colors([
-                    'danger' => 'admin',
-                    'primary' => 'user',
-                ])
-                ->label('Role'),
+                // ✅ Tampilkan role dari Spatie dengan aman
+                Tables\Columns\TextColumn::make('roles')
+                    ->label('Role')
+                    ->sortable()
+                    ->searchable()
+                    ->formatStateUsing(fn ($state, $record) => $record->getRoleNames()->implode(', ') ?: '-'),
 
-            Tables\Columns\TextColumn::make('created_at')
-                ->dateTime(),
-        ])
-        ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
-        ]);
-}
-
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime(),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ]);
+    }
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
-{
-    return [
-        'index' => Pages\ListUsers::route('/'),
-        'create' => Pages\CreateUser::route('/create'),
-        'edit' => Pages\EditUser::route('/{record}/edit'),
-    ];
-}
-
+    {
+        return [
+            'index' => Pages\ListUsers::route('/'),
+            'create' => Pages\CreateUser::route('/create'),
+            'edit' => Pages\EditUser::route('/{record}/edit'),
+        ];
+    }
 }

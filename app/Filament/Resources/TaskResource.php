@@ -19,24 +19,27 @@ class TaskResource extends Resource
     protected static ?string $model = \App\Models\Task::class;
 protected static ?string $navigationIcon = 'heroicon-o-clipboard';
 protected static ?string $navigationGroup = 'Task Management';
-    public static function form(Form $form): Form
-    {
-        return $form
+   public static function form(Form $form): Form
+{
+    return $form
         ->schema([
+            // User
             Forms\Components\Select::make('user_id')
-    ->relationship('user', 'name')
-    ->searchable()
-    ->visible(fn () => auth()->user()->isAdmin())
-    ->required(),
+                ->relationship('user', 'name')
+                ->searchable()
+                ->visible(fn () => auth()->user()->hasRole('admin'))
+                ->required(),
 
+            // Title
             Forms\Components\TextInput::make('title')
                 ->required()
                 ->maxLength(255),
 
+            // Description
             Forms\Components\Textarea::make('description')
                 ->columnSpanFull(),
-                
 
+            // Status
             Forms\Components\Select::make('status')
                 ->options([
                     'todo' => 'Todo',
@@ -46,6 +49,7 @@ protected static ?string $navigationGroup = 'Task Management';
                 ])
                 ->required(),
 
+            // Priority
             Forms\Components\Select::make('priority')
                 ->options([
                     'low' => 'Low',
@@ -54,12 +58,21 @@ protected static ?string $navigationGroup = 'Task Management';
                 ])
                 ->default('medium'),
 
+            // Deadline
             Forms\Components\DatePicker::make('deadline'),
 
+            // Canceled Reason
             Forms\Components\Textarea::make('canceled_reason')
                 ->visible(fn ($get) => $get('status') === 'canceled'),
+
+            // ⚡ TEAM FIELD (opsional)
+            Forms\Components\Select::make('team_id')
+                ->label('Team (opsional)')
+                ->relationship('team', 'name')
+                ->nullable()
+                ->helperText('Kosongkan jika task individu'),
         ]);
-    }
+}
 
     public static function table(Table $table): Table
     {
@@ -114,7 +127,7 @@ protected static ?string $navigationGroup = 'Task Management';
 {
     $query = parent::getEloquentQuery();
 
-    if (! auth()->user()->isAdmin()) {
+    if (! auth()->user()->hasRole('admin')) {
         $query->where('user_id', auth()->id());
     }
 
@@ -130,5 +143,6 @@ public static function canDelete($record): bool
 {
     return auth()->user()->can('delete', $record);
 }
+
 
 }

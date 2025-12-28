@@ -44,7 +44,7 @@ class TaskKanban extends KanbanBoard
         $query = Task::query();
 
         // User biasa lihat task sendiri, admin lihat semua
-        if (! auth()->user()->isAdmin()) {
+        if (! auth()->user()->hasRole('admin')) {
             $query->where('user_id', auth()->id());
         }
 

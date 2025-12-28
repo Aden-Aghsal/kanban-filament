@@ -12,7 +12,7 @@ class TaskPolicy
      */
     public function view(User $user, Task $task): bool
     {
-        return $user->isAdmin() || $task->user_id === $user->id;
+        return $user->hasRole('admin') || $task->user_id === $user->id;
     }
 
     /**
@@ -20,7 +20,7 @@ class TaskPolicy
      */
     public function update(User $user, Task $task): bool
     {
-        return $user->isAdmin() || $task->user_id === $user->id;
+        return $user->hasRole('admin') || $task->user_id === $user->id;
     }
 
     /**
@@ -28,7 +28,7 @@ class TaskPolicy
      */
     public function delete(User $user, Task $task): bool
     {
-        return $user->isAdmin();
+        return $user->hasRole('admin');
     }
 
     /**
@@ -36,7 +36,7 @@ class TaskPolicy
      */
     public function cancel(User $user, Task $task): bool
     {
-        return $user->isAdmin() || $task->user_id === $user->id;
+        return $user->hasRole('admin') || $task->user_id === $user->id;
     }
 
     public function create(User $user): bool

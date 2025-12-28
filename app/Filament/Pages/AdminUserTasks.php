@@ -17,6 +17,7 @@ class AdminUserTasks extends Page implements HasTable
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static string $view = 'filament.pages.admin-user-tasks';
     protected static ?string $navigationLabel = 'User Tasks';
+     protected static ?string $navigationGroup = 'Task Management';
     protected static ?string $title = 'User Task Overview';
 
     /**

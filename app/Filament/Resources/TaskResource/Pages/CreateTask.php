@@ -11,7 +11,7 @@ class CreateTask extends CreateRecord
     protected static string $resource = TaskResource::class;
     protected function mutateFormDataBeforeCreate(array $data): array
 {
-    if (! auth()->user()->isAdmin()) {
+    if (! auth()->user()->hasRole('admin')) {
         $data['user_id'] = auth()->id();
     }
 

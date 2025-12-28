@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
+use Filament\Panel;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Laravel\Sanctum\HasApiTokens;
-use Filament\Models\Contracts\HasAvatar;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Panel;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements HasAvatar, FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
@@ -32,44 +32,40 @@ class User extends Authenticatable implements HasAvatar, FilamentUser
         'email_verified_at' => 'datetime',
     ];
 
-    /* =========================
-     |  FILAMENT ACCESS CONTROL
-     ========================= */
-    public function canAccessPanel(Panel $panel): bool
+    // ✅ AUTO ROLE UNTUK USER BARU
+    protected static function booted()
     {
-        if ($panel->getId() === 'admin') {
-            return $this->hasRole('admin');
-        }
-
-        if ($panel->getId() === 'user') {
-            return $this->hasRole('user') || $this->hasRole('admin');
-        }
-
-        return false;
+        static::created(function ($user) {
+            if (! $user->hasAnyRole(['admin', 'user'])) {
+                $user->assignRole('user');
+            }
+        });
     }
 
-    /* =========================
-     |  FILAMENT AVATAR
-     ========================= */
+    // ✅ FILAMENT PANEL ACCESS (FINAL)
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return match ($panel->getId()) {
+            'admin' => $this->hasRole('admin'),
+            'user'  => $this->hasRole('user'),
+            default => false,
+        };
+    }
+
+    // ✅ AVATAR
     public function getFilamentAvatarUrl(): ?string
     {
         return $this->avatar
             ?: 'https://ui-avatars.com/api/?name=' . urlencode($this->name);
     }
 
-    /* =========================
-     |  ROLE CHECKER
-     ========================= */
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
     }
 
-    /* =========================
-     |  RELATION
-     ========================= */
     public function tasks()
-    {
-        return $this->hasMany(Task::class);
-    }
+{
+    return $this->hasMany(\App\Models\Task::class);
+}
 }

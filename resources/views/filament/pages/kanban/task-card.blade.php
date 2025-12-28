@@ -33,6 +33,17 @@
         <p class="text-red-700 text-xs mt-1 italic">Alasan: {{ $record->canceled_reason }}</p>
     @endif
 
+    {{-- Team / Individu --}}
+    @if ($record->team)
+        <span class="inline-block text-xs font-semibold px-2 py-1 rounded bg-purple-200 text-purple-800 mt-2">
+            Tim: {{ $record->team->name }}
+        </span>
+    @else
+        <span class="inline-block text-xs font-semibold px-2 py-1 rounded bg-blue-200 text-blue-800 mt-2">
+            Individu
+        </span>
+    @endif
+
     {{-- Footer: Owner + Deadline --}}
     <div class="flex justify-between items-center mt-3 text-xs text-gray-500">
         <span>Owner: {{ $record->user->name ?? 'N/A' }}</span>
@@ -40,17 +51,4 @@
             <span>Deadline: {{ \Carbon\Carbon::parse($record->deadline)->format('d M Y') }}</span>
         @endif
     </div>
-
-    {{-- Action: Cancel Task --}}
-   {{-- @if(auth()->user()->can('cancel', $record))
-        <div class="mt-2 text-right">
-            <button
-                type="button"
-                wire:click="$emit('mountAction', 'cancelTask', {{ json_encode(['task_id' => $record->id]) }})"
-                class="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-            >
-                Cancel
-            </button>
-        </div>
-    @endif--}}
 </div>

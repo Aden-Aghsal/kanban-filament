@@ -31,4 +31,21 @@ class Task extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+public function team()
+{
+    return $this->belongsTo(Team::class);
+}
+
+// Scope untuk filter task tim / individu
+public function scopeTeam($query)
+{
+    return $query->whereNotNull('team_id');
+}
+
+public function scopeIndividual($query)
+{
+    return $query->whereNull('team_id');
+}
+
 }

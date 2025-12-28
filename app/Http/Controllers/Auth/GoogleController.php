@@ -16,32 +16,31 @@ class GoogleController extends Controller
     }
 
     public function callback()
-{
-    $googleUser = Socialite::driver('google')
-        ->stateless()
-        ->user();
+    {
+        $googleUser = Socialite::driver('google')
+            ->stateless()
+            ->user();
 
-    $user = User::updateOrCreate(
-        ['email' => $googleUser->getEmail()],
-        [
-            'name' => $googleUser->getName(),
-            'google_id' => $googleUser->getId(),
-        ]
-    );
+        $user = User::updateOrCreate(
+            ['email' => $googleUser->getEmail()],
+            [
+                'name' => $googleUser->getName(),
+                'google_id' => $googleUser->getId(),
+                'password' => bcrypt(Str::random(32)),
+            ]
+        );
 
-    // Default role untuk user baru
-    if (! $user->hasAnyRole(['admin', 'user'])) {
-        $user->assignRole('user');
+    
+        if (! $user->hasAnyRole(['user', 'admin'])) {
+            $user->assignRole('user');
+        }
+
+        Auth::login($user);
+
+        if ($user->hasRole('admin')) {
+            return redirect('/admin');
+        }
+
+        return redirect('/app');
     }
-
-    Auth::login($user);
-
-    //  Redirect sesuai role
-    if ($user->hasRole('admin')) {
-        return redirect('/admin');
-    }
-
-    return redirect('/app');
-}
-
 }
