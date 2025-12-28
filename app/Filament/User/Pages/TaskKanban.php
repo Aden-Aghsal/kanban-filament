@@ -4,23 +4,18 @@ namespace App\Filament\User\Pages;
 
 use App\Models\Task;
 use App\Enums\TaskStatus;
-use App\Enums\TaskPriority;
-use Filament\Forms;
-use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
 use Illuminate\Support\Collection;
-use Illuminate\Auth\Access\AuthorizationException;
 
 class TaskKanban extends KanbanBoard
 {
     protected static string $model = Task::class;
     protected static string $statusEnum = TaskStatus::class;
 
-   protected static ?string $navigationGroup = 'Task Management';
-protected static ?string $navigationLabel = 'Kanban Board';
-protected static ?string $navigationIcon = 'heroicon-o-view-columns';
-
+    protected static ?string $navigationGroup = 'Task Management';
+    protected static ?string $navigationLabel = 'Kanban Board';
+    protected static ?string $navigationIcon = 'heroicon-o-view-columns';
 
     /* =======================
        UI / UX
@@ -52,7 +47,7 @@ protected static ?string $navigationIcon = 'heroicon-o-view-columns';
     }
 
     /* =======================
-       DRAG & DROP
+       DRAG & DROP (BEBAS)
     ======================= */
     public function onStatusChanged(
         string|int $recordId,
@@ -62,70 +57,17 @@ protected static ?string $navigationIcon = 'heroicon-o-view-columns';
     ): void {
         $task = Task::findOrFail($recordId);
 
-        if (! auth()->user()->can('update', $task)) {
-            throw new AuthorizationException('Unauthorized action.');
-        }
-
-        $newStatus = TaskStatus::from($status);
-
-        // user biasa tidak bisa langsung pindah ke DONE
-        if ($newStatus === TaskStatus::DONE) {
-            Notification::make()
-                ->title('Tidak diizinkan')
-                ->danger()
-                ->send();
-            return;
-        }
-
-        // cancel pakai modal
-        if ($newStatus === TaskStatus::CANCELED) {
-            $this->mountAction('cancelTask', [
-                'task_id' => $task->id,
-            ]);
-            return;
-        }
-
+        // update status langsung, bebas drag & drop
         $task->update([
-            'status' => $newStatus,
-            'canceled_at' => null,
-            'canceled_reason' => null,
+            'status' => TaskStatus::from($status),
+            'canceled_at' => $status === TaskStatus::CANCELED->value ? now() : null,
+            'canceled_reason' => $status === TaskStatus::CANCELED->value ? 'Dicancel via drag & drop' : null,
         ]);
+
+        // notifikasi toast ringan
+        Notification::make()
+            ->title("Task \"{$task->title}\" dipindahkan ke {$status}")
+            ->success()
+            ->send();
     }
-
-    /* =======================
-       ACTION: CANCEL TASK
-    ======================= */
-    // protected function getActions(): array
-    // {
-    //     return [
-    //         Action::make('cancelTask')
-    //             ->label('Cancel Task')
-    //             ->modalHeading('Cancel Task')
-    //             ->modalDescription('Masukkan alasan pembatalan task')
-    //             ->form([
-    //                 Forms\Components\Textarea::make('canceled_reason')
-    //                     ->label('Alasan Cancel')
-    //                     ->required()
-    //                     ->rows(3),
-    //             ])
-    //             ->action(function (array $data, array $arguments) {
-    //                 $task = Task::findOrFail($arguments['task_id']);
-
-    //                 if (! auth()->user()->can('cancel', $task)) {
-    //                     abort(403);
-    //                 }
-
-    //                 $task->update([
-    //                     'status' => TaskStatus::CANCELED,
-    //                     'canceled_at' => now(),
-    //                     'canceled_reason' => $data['canceled_reason'],
-    //                 ]);
-
-    //                 Notification::make()
-    //                     ->title('Task berhasil dicancel')
-    //                     ->success()
-    //                     ->send();
-    //             }),
-    //     ];
-    // }
 }
